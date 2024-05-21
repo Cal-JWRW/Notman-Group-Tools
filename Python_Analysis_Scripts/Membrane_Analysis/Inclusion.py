@@ -144,7 +144,7 @@ class Inclusion_Analysis:
 
         return(inclusion_times, transition_times, times, mean_top, mean_bot, positions, inclusion_amt)
 
-    def Inclusion_Free_Energy(self):
+    def Inclusion_Free_Energy(self, start_time, step):
 
         #Load Universe
         u = mda.Universe(self.tpr, self.xtc)
@@ -164,14 +164,14 @@ class Inclusion_Analysis:
             lipid_sel=Lipid_Sel_String,
             height_sel=f'resname {self.inclusion_res} and name {self.HA}'
         )
-        height.run(start=0, step=10, verbose=True)
+        height.run(start=start_time, step=step, verbose=True)
 
         angles = ZAngles(
             universe=u,
             atom_A_sel=f'name {self.HA} and resname {self.inclusion_res}',
             atom_B_sel=f'name {self.TA} and resname {self.inclusion_res}'
         )
-        angles.run(start=0, step=10, verbose=True)
+        angles.run(start=start_time, step=step, verbose=True)
 
         pmf = JointDensity(
             ob1=angles.z_angles,
@@ -198,3 +198,7 @@ class Inclusion_Analysis:
 
 
         return(pmf.joint_mesh_values, extent)
+
+
+
+
