@@ -6,6 +6,7 @@ import os
 from lipyphilic.lib.z_positions import ZPositions
 from lipyphilic.lib.z_angles import ZAngles
 from lipyphilic.lib.plotting import JointDensity
+from lipyphilic.lib.z_thickness import ZThickness
 
 class Inclusion_Analysis:
     def __init__(self, tpr, xtc, lipids, inclusion_res, HA, TA, HGR, HGA):
@@ -199,6 +200,37 @@ class Inclusion_Analysis:
 
         return(pmf.joint_mesh_values, extent)
 
+    def Hidden_Lipid_State(self, start, step):
 
+        def get_gmm_params(gmm):
+            means = gmm.means_.flatten()
+            weights = gmm.weights_.flatten()
+            sds = np.sqrt(gmm.covariances_).flatten()
+            sorter = np.argsort(means)
+            return means[sorter], weights[sorter], sds[sorter]
+
+        u = mda.Universe(self.tpr, self.xtc)
+        lipid_sel = 'resname '
+        thickness_sel = ''
+        for i in self.lipids:
+            lipid_sel += f'{i} '
+            thickness_sel += f'(resname {i} and not name H*) or '
+
+        thickness_sel = thickness_sel[:-4]
+        lipid_sel = lipid_sel[:-1]
+
+        membrane = u.select_atoms(lipid_sel)
+        thickness = ZThickness(
+            universe=u,
+            lipid_sel = thickness_sel
+        )
+        thickness.run()
+
+        lipid_order = np.zeros_like(thickness.z_thickness, dtype=np.int8)
+
+        
+
+        
+        return()
 
 
