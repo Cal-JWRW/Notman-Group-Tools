@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Check if the correct number of arguments is provided
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <string_to_replace> <replacement_string> <file>"
+    exit 1
+fi
+
+# Assign arguments to variables
+STRING_TO_REPLACE=$1
+REPLACEMENT_STRING=$2
+FILE=$3
+
+# Use awk to replace the string and remove one leading space from matching lines
+awk -v str_to_replace="$STRING_TO_REPLACE" -v replacement_str="$REPLACEMENT_STRING" '
+{
+    if ($0 ~ str_to_replace) {
+        gsub(str_to_replace, replacement_str)
+        sub(/^ /, "")
+    }
+    print
+}' "$FILE" > tmpfile && mv tmpfile "$FILE"
+
+echo "Replacements and space removal done."
+
