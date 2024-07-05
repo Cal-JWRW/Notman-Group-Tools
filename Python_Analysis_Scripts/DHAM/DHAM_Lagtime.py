@@ -80,11 +80,6 @@ def Relaxation_Times(Trajectories,Bin_Centers,Bins, Min_State, Max_State, Biasin
     with multiprocessing.Pool(processes=int(os.cpu_count()/4)) as pool:
         results = pool.map(Parallel_Convergence, args)
         MMs.extend(results)
-    
-    for i in tqdm(args):
-        MMs.append(Parallel_Convergence(i))
-    
-
 
 
     return(MMs)

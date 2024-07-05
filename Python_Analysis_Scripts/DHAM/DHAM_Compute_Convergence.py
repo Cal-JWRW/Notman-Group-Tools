@@ -26,35 +26,6 @@ import matplotlib.pyplot as plt
 
 def find_bin_plateau_end(data, window_size=5, std_threshold=1.5):
     """
-    Identify the end of the plateau in the bin convergence
-
-    Parametrs: 
-        data (list or np.array): The input data set
-        window_size (int): The size of sliding window
-        std_threshold (float): The threshold for the standard deviation under which to consider a plateau
-    
-    Returns:
-        int: The index of the plateau
-    """
-
-    data = np.array(data)
-
-    #Calulate rolling standard deviation
-    rolling_std = np.array([np.std(data[i:i+window_size]) for i in range(len(data)-window_size+1)])
-    rolling_std = rolling_std/(min(rolling_std)+0.1) #Normalize  standard deviation
-
-    plateau_end_indices = np.where(rolling_std < std_threshold)[0]
-
-    #Return the last index where the standard deviation is below  the threshold
-    if len(plateau_end_indices) > 0:
-        return (plateau_end_indices[-1] + window_size-1)
-    else: 
-        return len(data)-1
-
-
-def find_lag_plateau_start(data, window_size=3, std_threshold=0.5):
-    
-    """
     Identify the end of a plateau in the data set.
     
     Parameters:
@@ -66,21 +37,32 @@ def find_lag_plateau_start(data, window_size=3, std_threshold=0.5):
         int: The index of the end of the plateau.
     """
     data = np.array(data)
-    
+    window_size = int(window_size)
     # Calculate the rolling standard deviation
     rolling_std = np.array([np.std(data[i:i+window_size]) for i in range(len(data) - window_size + 1)])
-    rolling_std = rolling_std/(min(rolling_std)+0.01)
-    print(rolling_std)
-    
     # Identify where the standard deviation exceeds the threshold
     plateau_end_indices = np.where(rolling_std < std_threshold)[0]
     
     # Return the first index where the standard deviation exceeds the threshold
     if len(plateau_end_indices) > 0:
-        return plateau_end_indices[0] + window_size - 1
+        return plateau_end_indices[-1] + window_size - 1
     else:
         return len(data) - 1  # If no plateau end is found, return the last index
+
+
+def running_average(data, window_size):
+    if window_size <= 0:
+        raise ValueError("Window size must be a positive integer")
+
+
+    running_averages = []
+    for i in range(len(data)):
+        start_index = max(0, i - window_size + 1)
+        current_window = data[start_index:i+1]
+        window_average = sum(current_window) / len(current_window)
+        running_averages.append(window_average)
     
+    return running_averages
 def main():
     os.system('mkdir ./DHAM_Analysis')
     while True:
@@ -122,9 +104,16 @@ def main():
         trj_tot.append(trj)
     trj_tot = np.asarray(trj_tot)
 
+    
     bins, bins_pmf, AUC = DHAM_Convergence.Bin_Convergence(trj_tot, cen_tot, il, 1000, 10, mins, maxs, bp, temp, int(maxs))
-    bin_plateau_end = find_bin_plateau_end(AUC, (1000/(10*10)), 0.5)
+
+    nAUC = (AUC-min(AUC))/(max(AUC)-min(AUC))
+
+    dbins = bins[1]-bins[0]
+
+    bin_plateau_end = find_bin_plateau_end(nAUC, 10, dbins/max(bins))
     ideal_bins = bins[bin_plateau_end]
+
 
     fig, ax = plt.subplots()
     ax.plot(bins, AUC)
@@ -139,7 +128,7 @@ def main():
         'AUC': AUC
     })
     bin_data.to_csv('./DHAM_Analysis/Bin_Data.csv', sep=' ', index=False)
-
+   
     MMs = DHAM_Lagtime.Relaxation_Times(trj_tot, cen_tot, ideal_bins, mins, maxs, bp, temp, 1, 5000, 10)
 
     vs = []
@@ -149,6 +138,13 @@ def main():
         vs.append(-t[count]/np.log(sl))
     vs = np.asarray(vs).astype(np.float128)
 
+
+    logvs = np.log10(vs)
+    vs_grad = np.grad(logvs)/np.grad(t)
+    vs_grad = running_average(vs_grad, int(len(vs_grad)/10))
+    vs_grad = (vs_grad-min(vs_grad))/(max(vs_grad)-min(vs_grad))
+    plat_end = int(np.where(vs_grad <= np.mean(vs_grad))[0][0])
+
     fig, ax = plt.subplots()
     ax.plot(t, vs)
     ax.set_yscale('log')
@@ -157,10 +153,10 @@ def main():
     ax.set_ylim([1E-10, 1E-0])
     ax.set_xlabel(r'$Lagtime$ / $\rm{}s$')
     ax.set_ylabel(r'$Implied\;Relaxation\;Times$ / $\rm{} s$')
-    time_plateau_start = find_lag_plateau_start(np.diff(vs, 2))
-    ideal_lagtime = int(t[time_plateau_start]*1E13)
+ 
+    ideal_lagtime = int(t[plat_end]*1E13)
 
-    ax.axvline(x=t[time_plateau_start], color='r', linestyle='--', label=f'Ideal Lagtime: {ideal_lagtime} x10^-13 s')
+    ax.axvline(x=t[plat_end], color='r', linestyle='--', label=f'Ideal Lagtime: {ideal_lagtime} x10^-13 s')
     
     ax.legend()
     fig.savefig('./DHAM_Analysis/Lag_Convergence.png', dpi=300)
