@@ -125,6 +125,8 @@ def Time_Equilibration(Trajectories, Bin_Centers, lag, Bins, Time_Step,Min_State
         results = pool.map(Parallel_Convergence, args)
         pmf_results.extend(results)
 
+    pmf_results = np.asarray(pmf_results)
+
     AUC = []
     for count, i in enumerate(pmf_results):
         AUC.append(np.trapz(i, states))

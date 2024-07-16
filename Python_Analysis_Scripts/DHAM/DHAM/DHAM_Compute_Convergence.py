@@ -107,6 +107,8 @@ def main():
     
     bins, bins_pmf, AUC = DHAM_Convergence.Bin_Convergence(trj_tot, cen_tot, il, 1000, 10, mins, maxs, bp, temp, int(maxs))
 
+    AUC = np.asarray(AUC)
+
     nAUC = (AUC-min(AUC))/(max(AUC)-min(AUC))
 
     dbins = bins[1]-bins[0]
